@@ -5,25 +5,43 @@ import { useState } from 'react';
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [risultatoDati, setRisultatoDati] = useState<any>(null); // Nuovo stato per i risultati
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
+      setRisultatoDati(null); // Resetta i vecchi risultati se carichi una nuova foto
     }
   };
 
   const handleScan = async () => {
     if (!file) return;
     setLoading(true);
+    setRisultatoDati(null);
     
-    // Qui chiameremo la nostra API futura
-    console.log("Scansione in corso del file:", file.name);
-    
-    // Simuliamo un'attesa di 2 secondi
-    setTimeout(() => {
+    try {
+      // Prepariamo il file da inviare
+      const formData = new FormData();
+      formData.append('document', file);
+
+      // Chiamiamo la nostra API
+      const response = await fetch('/api/scan', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setRisultatoDati(data.data.pneumatici);
+      } else {
+        alert("Errore: " + data.error);
+      }
+    } catch (error) {
+      alert("Errore di connessione al server.");
+    } finally {
       setLoading(false);
-      alert("Simulazione completata! A breve collegheremo l'IA.");
-    }, 2000);
+    }
   };
 
   return (
@@ -49,8 +67,21 @@ export default function Home() {
           disabled={!file || loading}
           className="mt-6 w-full bg-blue-600 text-white font-bold py-4 rounded-xl disabled:bg-gray-300 disabled:cursor-not-allowed transition hover:bg-blue-700"
         >
-          {loading ? "Analisi in corso..." : "Analizza Bolla"}
+          {loading ? "Analisi in corso con IA..." : "Analizza Bolla"}
         </button>
+
+        {/* Mostriamo i risultati estratti */}
+        {risultatoDati && (
+          <div className="mt-8 text-left bg-gray-100 p-4 rounded-xl">
+            <h3 className="font-bold text-gray-800 mb-3">Gomme Rilevate:</h3>
+            {risultatoDati.map((gomma: any, index: number) => (
+              <div key={index} className="bg-white p-3 rounded shadow-sm mb-2 border-l-4 border-blue-500">
+                <p className="font-bold text-gray-900">{gomma.brand} {gomma.misura}</p>
+                <p className="text-sm text-gray-600">Indici: {gomma.indici} | Quantità: {gomma.quantita}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </main>
   );
