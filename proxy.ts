@@ -36,16 +36,18 @@ export async function proxy(request: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const url = new URL(request.url);
+const url = new URL(request.url);
   const isLoginPage = url.pathname.startsWith('/login');
+  const isPublicPage = url.pathname === '/'; // La nostra nuova landing page
 
-  // 4. Logica di reindirizzamento
-  if (!session && !isLoginPage) {
+  // Se NON è loggato e cerca di entrare in pagine private -> rimandalo al login
+  if (!session && !isLoginPage && !isPublicPage) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  if (session && isLoginPage) {
-    return NextResponse.redirect(new URL('/', request.url));
+  // Se è GIÀ loggato e va sul login o sulla landing -> portalo dritto in dashboard
+  if (session && (isLoginPage || isPublicPage)) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   return supabaseResponse;
